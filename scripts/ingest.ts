@@ -18,4 +18,7 @@ if (!exportDir || !dataDir) {
 
 const db = openDb(join(dataDir, 'skate.sqlite'))
 const result = await runIngest(db, exportDir, (msg) => console.log(msg))
-console.log(`Fertig: ${result.workouts} Sessions gespeichert, davon ${result.withRoute} mit GPS-Route`)
+console.log(
+	`Fertig: ${result.workouts} Sessions gespeichert, davon ${result.withRoute} mit GPS-Route, ` +
+		`dazu ${result.tageswerte} Tageswerte (Ruhepuls, HRV)`,
+)

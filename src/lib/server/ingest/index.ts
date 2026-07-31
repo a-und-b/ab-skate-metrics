@@ -1,9 +1,9 @@
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
-import { replaceTrackpoints, upsertSession } from '../db/index.ts'
+import { replaceTrackpoints, upsertDailyMetrics, upsertSession } from '../db/index.ts'
 import { cleanTrackpoints, computeGpxMetrics } from '../domain/metrics.ts'
-import { readSkatingWorkouts } from './export-xml.ts'
+import { readExport } from './export-xml.ts'
 import { readGpx, type Trackpoint } from './gpx.ts'
 
 const MATCH_TOLERANCE_MS = 5 * 60 * 1000
@@ -11,6 +11,7 @@ const MATCH_TOLERANCE_MS = 5 * 60 * 1000
 export interface IngestResult {
 	workouts: number
 	withRoute: number
+	tageswerte: number
 }
 
 /**
@@ -26,13 +27,20 @@ export async function runIngest(
 ): Promise<IngestResult> {
 	log('Lese Export.xml (dauert einige Minuten) …')
 	let lastReport = 0
-	const workouts = await readSkatingWorkouts(join(exportDir, 'Export.xml'), (bytes) => {
+	const { workouts, daily } = await readExport(join(exportDir, 'Export.xml'), (bytes) => {
 		if (bytes - lastReport >= 200 * 1024 * 1024) {
 			lastReport = bytes
 			log(`  ${Math.round(bytes / 1024 / 1024)} MB gelesen`)
 		}
 	})
 	log(`${workouts.length} Skate-Workouts gefunden`)
+
+	const tageswerte = [
+		...[...daily.ruhepuls].map(([datum, wert]) => ({ datum, typ: 'ruhepuls' as const, wert })),
+		...[...daily.hrv].map(([datum, wert]) => ({ datum, typ: 'hrv' as const, wert })),
+	]
+	upsertDailyMetrics(db, tageswerte)
+	log(`${daily.ruhepuls.size} Ruhepuls-Tage, ${daily.hrv.size} HRV-Tage`)
 
 	const routesDir = join(exportDir, 'workout-routes')
 	const files = (await readdir(routesDir)).filter((f) => f.endsWith('.gpx')).sort()
@@ -85,5 +93,5 @@ export async function runIngest(
 		log(`  ${w.startLocal} — ${route ? `${clean.length} Trackpoints (${route.file})` : 'keine GPS-Route'}`)
 	}
 
-	return { workouts: workouts.length, withRoute }
+	return { workouts: workouts.length, withRoute, tageswerte: tageswerte.length }
 }

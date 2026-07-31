@@ -1,6 +1,14 @@
 import { error, fail } from '@sveltejs/kit'
-import { attemptsForSession, getSession, listSessions, listTricks, upsertAttempt } from '$lib/server/db'
+import {
+	attemptsForSession,
+	dailySeries,
+	getSession,
+	listSessions,
+	listTricks,
+	upsertAttempt,
+} from '$lib/server/db'
 import { db } from '$lib/server/db/handle'
+import { beobachtungen } from '$lib/server/domain/beobachtung'
 import { parseAttempts } from '$lib/server/domain/trick-log'
 
 function nachbarn(id: number) {
@@ -17,6 +25,12 @@ export function load({ params }) {
 		session,
 		tricks: listTricks(db),
 		erfasst: attemptsForSession(db, id),
+		beobachtungen: beobachtungen(
+			listSessions(db),
+			dailySeries(db, 'ruhepuls'),
+			dailySeries(db, 'hrv'),
+			new Date(),
+		),
 		...nachbarn(id),
 	}
 }

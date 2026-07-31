@@ -1,6 +1,8 @@
 // Dünner CLI-Adapter: Session-Tabelle plus Top-Speed-Verlauf als Wochenaggregat.
 import { join } from 'node:path'
-import { listSessions, openDb, weeklyTopSpeed } from '../src/lib/server/db/index.ts'
+import { BEOBACHTUNG_UEBERSCHRIFT, beobachtungText } from '../src/lib/beobachtung-text.ts'
+import { dailySeries, listSessions, openDb, weeklyTopSpeed } from '../src/lib/server/db/index.ts'
+import { beobachtungen } from '../src/lib/server/domain/beobachtung.ts'
 
 try {
 	process.loadEnvFile()
@@ -57,4 +59,10 @@ for (const w of weeks) {
 	console.log(
 		`${w.week}  ${String(w.sessions).padStart(2)} ${w.sessions === 1 ? 'Session ' : 'Sessions'}  ${label.padStart(9)}  ${bar}`,
 	)
+}
+
+const beob = beobachtungen(sessions, dailySeries(db, 'ruhepuls'), dailySeries(db, 'hrv'), new Date())
+if (beob.length > 0) {
+	console.log(`\n${BEOBACHTUNG_UEBERSCHRIFT}\n`)
+	for (const b of beob) console.log(`  ${beobachtungText(b)}`)
 }

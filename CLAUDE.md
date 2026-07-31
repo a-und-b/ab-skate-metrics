@@ -76,6 +76,10 @@ Markup, keine rohen `slate-*`-Klassen.
   `.ts`-Endung, keine Constructor-Parameter-Properties, kein `enum`.
   In Routen/Svelte-Dateien `$lib/...` **ohne** Endung.
 - **Keine externen Dienste** (Tiles, Fonts, Analytics) ohne ADR.
+- **Beobachtungen sagen nie, wie gut etwas war oder was zu tun ist** (ADR-0005).
+  `domain/beobachtung.ts` rechnet und gibt nur Zahlen zurück, `lib/beobachtung-text.ts`
+  formuliert. Schwellen liegen in `lib/schwellen.ts` und sind Stellschrauben,
+  keine Messungen. Ein Test prüft die Formulierungen gegen verbotene Wörter.
 
 ## UI-Prinzipien (ADHS-bedingt, gelten schon für die CLI-Ausgabe)
 

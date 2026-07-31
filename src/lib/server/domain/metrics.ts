@@ -5,6 +5,13 @@ export const H_ACC_MAX_M = 10
 export const MOVING_MIN_MS = 0.7
 const MAX_GAP_S = 10
 
+/** Median statt Mittelwert, wo Ausreißer zu erwarten sind. */
+export function median(werte: number[]): number {
+	const s = [...werte].sort((a, b) => a - b)
+	const m = Math.floor(s.length / 2)
+	return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m]
+}
+
 /** GPS-Ausreißer raus: Punkte mit hAcc >= 10 m. Punkte ohne hAcc bleiben drin. */
 export function cleanTrackpoints(points: Trackpoint[]): Trackpoint[] {
 	return points.filter((p) => p.hAcc === undefined || p.hAcc < H_ACC_MAX_M)

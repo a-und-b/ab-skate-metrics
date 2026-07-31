@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { BEOBACHTUNG_UEBERSCHRIFT, beobachtungText } from '$lib/beobachtung-text'
 	import { WERTUNG_LABELS } from '$lib/wertung'
 
 	let { data, form } = $props()
@@ -34,6 +35,15 @@
 			{/if}
 		</nav>
 	</header>
+
+	{#if data.beobachtungen.length > 0}
+		<section class="mb-6 rounded bg-flaeche-leise p-3 text-sm">
+			<h2 class="mb-1 font-medium">{BEOBACHTUNG_UEBERSCHRIFT}</h2>
+			<ul class="space-y-1 text-text-leise">
+				{#each data.beobachtungen as b}<li>{beobachtungText(b)}</li>{/each}
+			</ul>
+		</section>
+	{/if}
 
 	{#if form?.fehler}
 		<div class="mb-4 rounded border border-hinweis p-3 text-sm">

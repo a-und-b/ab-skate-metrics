@@ -13,7 +13,12 @@ Fitness-Apps.
 
 Meilenstein 1 ist umgesetzt: Ingest des Health-Exports nach SQLite plus
 Terminal-Report. Dazu die Trick-Erfassung als Web-Formular (handy-tauglich,
-läuft bisher nur lokal). HR-Zonen, Empfehlung und Karte existieren noch nicht.
+läuft bisher nur lokal) und die Belastungsbeobachtung aus Ruhepuls und HRV.
+HR-Zonen, Trick-Korrelation und Karte existieren noch nicht.
+
+Das Werkzeug bewertet keine Leistung. Es zeigt Verläufe und benennt
+Auffälligkeiten sachlich — es lobt nicht, mahnt nicht und gibt keine
+Trainings- oder Gesundheitsempfehlung.
 
 ## Setup und Nutzung
 

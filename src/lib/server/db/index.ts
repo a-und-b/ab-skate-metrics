@@ -50,6 +50,16 @@ const MIGRATIONS: string[] = [
 	);
 	INSERT INTO trick (name) VALUES ('Ollie rollend'), ('Push (ohne Mongo)'), ('Rock to Fakie'), ('Boneless');
 	`,
+	// ADR-0005: Tagesreihen für die Belastungsbeobachtung. Auf Tagesebene
+	// aggregiert — die Rohauflösung trägt zu einem Trend nichts bei.
+	`
+	CREATE TABLE daily_metric (
+		datum TEXT NOT NULL,
+		typ TEXT NOT NULL,
+		wert REAL NOT NULL,
+		PRIMARY KEY (datum, typ)
+	);
+	`,
 ]
 
 export function openDb(path: string): DatabaseSync {
@@ -169,6 +179,37 @@ export function listSessions(db: DatabaseSync): SessionRow[] {
 
 export function getSession(db: DatabaseSync, id: number): SessionRow | undefined {
 	return db.prepare('SELECT * FROM session WHERE id = ?').get(id) as unknown as SessionRow | undefined
+}
+
+export type DailyTyp = 'ruhepuls' | 'hrv'
+
+export function upsertDailyMetrics(
+	db: DatabaseSync,
+	werte: { datum: string; typ: DailyTyp; wert: number }[],
+): void {
+	db.exec('BEGIN')
+	try {
+		const ins = db.prepare(
+			`INSERT INTO daily_metric (datum, typ, wert) VALUES (?, ?, ?)
+			 ON CONFLICT(datum, typ) DO UPDATE SET wert = excluded.wert`,
+		)
+		for (const w of werte) ins.run(w.datum, w.typ, w.wert)
+		db.exec('COMMIT')
+	} catch (e) {
+		db.exec('ROLLBACK')
+		throw e
+	}
+}
+
+export interface DailyRow {
+	datum: string
+	wert: number
+}
+
+export function dailySeries(db: DatabaseSync, typ: DailyTyp): DailyRow[] {
+	return db
+		.prepare('SELECT datum, wert FROM daily_metric WHERE typ = ? ORDER BY datum')
+		.all(typ) as unknown as DailyRow[]
 }
 
 export interface TrickRow {
