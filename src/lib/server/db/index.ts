@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite'
+import type { SpurPunkt } from '../domain/spur.ts'
 
 // Schemaänderungen: immer eine NEUE Migration anhängen, nie eine bestehende editieren.
 const MIGRATIONS: string[] = [
@@ -175,6 +176,12 @@ export interface SessionRow {
 
 export function listSessions(db: DatabaseSync): SessionRow[] {
 	return db.prepare('SELECT * FROM session ORDER BY start_utc').all() as unknown as SessionRow[]
+}
+
+export function trackpointsForSession(db: DatabaseSync, sessionId: number): SpurPunkt[] {
+	return db
+		.prepare('SELECT t_utc, lat, lon, ele, speed_ms FROM trackpoint WHERE session_id = ? ORDER BY t_utc')
+		.all(sessionId) as unknown as SpurPunkt[]
 }
 
 export function getSession(db: DatabaseSync, id: number): SessionRow | undefined {

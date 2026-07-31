@@ -5,11 +5,20 @@ import {
 	getSession,
 	listSessions,
 	listTricks,
+	trackpointsForSession,
 	upsertAttempt,
 } from '$lib/server/db'
 import { db } from '$lib/server/db/handle'
 import { beobachtungen } from '$lib/server/domain/beobachtung'
+import { spurGrafik, SPUR_DEFAULTS } from '$lib/server/domain/spur'
 import { parseAttempts } from '$lib/server/domain/trick-log'
+
+// ADR-0007: Fuzzing ist Default. Nur eine ausdrückliche Abschaltung deaktiviert es.
+const SPUR_OPTIONEN = {
+	...SPUR_DEFAULTS,
+	fuzz: process.env.GEO_FUZZ !== 'off',
+	radiusM: Number(process.env.GEO_FUZZ_RADIUS_M) || SPUR_DEFAULTS.radiusM,
+}
 
 function nachbarn(id: number) {
 	const alle = listSessions(db)
@@ -23,6 +32,8 @@ export function load({ params }) {
 	if (!session) error(404, 'Session nicht gefunden')
 	return {
 		session,
+		spur: spurGrafik(trackpointsForSession(db, id), SPUR_OPTIONEN),
+		gefuzzt: SPUR_OPTIONEN.fuzz,
 		tricks: listTricks(db),
 		erfasst: attemptsForSession(db, id),
 		beobachtungen: beobachtungen(

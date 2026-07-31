@@ -53,12 +53,26 @@ Die Web-UI umfasst bisher nur die Trick-Erfassung (`/session/[id]`). Sie läuft
 lokal; das Deployment nach Coolify/Hetzner steht am Ende (ADR-0006) und bekommt
 **nur** `session`, `trick`, `trick_attempt` — `trackpoint` bleibt lokal.
 
-Farben laufen über semantische Tokens in `src/app.css` (`text-leise`, `rand`,
-`flaeche`, `hinweis`) mit nativem `light-dark()`. Keine `dark:`-Varianten im
-Markup, keine rohen `slate-*`-Klassen.
+**Gestaltung: technisches Datenblatt / Plotterzeichnung.** Millimeterpapier als
+Grund, Tuschelinien, Ecken-Marken, Maßstabsbalken. Bewusst kein Fitness-App-Look:
+keine Ringe, Ziele, Streaks oder Feiern — ein Messgerät bewertet nicht.
+Farben über semantische Tokens in `src/app.css` (`text-leise`, `rand`, `raster`,
+`flaeche`, `hinweis`) mit nativem `light-dark()`; keine `dark:`-Varianten im
+Markup, keine rohen `slate-*`-Klassen. Bernstein (`hinweis`) bleibt Hinweisen
+vorbehalten und wird nie zur Dekoration. Schrift: Archivo (Text) und IBM Plex
+Mono (alle Zahlen, `.zahl`/`.marke` in `app.css`), lokal über `@fontsource` —
+**kein CDN-Abruf zur Laufzeit** (Briefing 5.4).
+
+Karten und Profile rendert `domain/spur.ts` **serverseitig** zu fertigen
+SVG-Pfaden. Rohkoordinaten erreichen den Client nie, und die Umrechnung ist
+testbar statt im Markup versteckt.
 
 ## Nicht verhandelbare Invarianten
 
+- **Geo-Fuzzing ist Default** (ADR-0007): jede Kartendarstellung zeigt nur
+  Punkte im Radius um den Median-Punkt der Session — die Anfahrt von der
+  Haustür erreicht weder Client noch Screenshot. Abschalten nur bewusst über
+  `GEO_FUZZ=off`. Ein Test prüft, dass entfernte Punkte nicht im Pfad landen.
 - **Datenschutz, Repo ist öffentlich:** keine Gesundheits-/Geodaten im Repo.
   `.gitignore` deckt `data/`, `*.xml`, `*.gpx`, `*.sqlite*`, `.env`, `BRIEFING.md`
   ab. Test-Fixtures sind synthetisch und leben als Strings in den Testdateien
