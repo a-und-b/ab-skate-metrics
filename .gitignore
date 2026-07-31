@@ -1,0 +1,14 @@
+# Gesundheits- und Geodaten bleiben lokal (siehe README, Abschnitt Datenschutz)
+data/
+*.xml
+*.gpx
+*.sqlite
+*.sqlite-*
+*.db
+.env
+
+# BRIEFING.md enthält reale Koordinaten und Gesundheitskontext — bleibt lokal
+BRIEFING.md
+
+node_modules/
+.DS_Store
