@@ -1,6 +1,6 @@
 # 0003 — Trick-Log: strukturierte Versuche mit Katalog
 
-Status: vorgeschlagen · Datum: 2026-07-31
+Status: angenommen · Datum: 2026-07-31
 
 ## Kontext
 

@@ -30,6 +30,26 @@ const MIGRATIONS: string[] = [
 	);
 	CREATE INDEX trackpoint_session_idx ON trackpoint(session_id);
 	`,
+	// ADR-0003: Trick-Log. Katalog vorbefüllt mit den aktuellen Arbeitspunkten,
+	// damit das Formular nie bei null anfängt.
+	`
+	CREATE TABLE trick (
+		id INTEGER PRIMARY KEY,
+		name TEXT NOT NULL UNIQUE,
+		aktiv INTEGER NOT NULL DEFAULT 1
+	);
+	CREATE TABLE trick_attempt (
+		id INTEGER PRIMARY KEY,
+		session_id INTEGER NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+		trick_id INTEGER NOT NULL REFERENCES trick(id),
+		versuche INTEGER NOT NULL CHECK (versuche >= 0),
+		gestanden INTEGER NOT NULL CHECK (gestanden >= 0 AND gestanden <= versuche),
+		wertung INTEGER CHECK (wertung BETWEEN 1 AND 3),
+		notiz TEXT,
+		UNIQUE (session_id, trick_id)
+	);
+	INSERT INTO trick (name) VALUES ('Ollie rollend'), ('Push (ohne Mongo)'), ('Rock to Fakie'), ('Boneless');
+	`,
 ]
 
 export function openDb(path: string): DatabaseSync {
@@ -145,6 +165,69 @@ export interface SessionRow {
 
 export function listSessions(db: DatabaseSync): SessionRow[] {
 	return db.prepare('SELECT * FROM session ORDER BY start_utc').all() as unknown as SessionRow[]
+}
+
+export interface TrickRow {
+	id: number
+	name: string
+	aktiv: number
+}
+
+export function listTricks(db: DatabaseSync, nurAktive = true): TrickRow[] {
+	const sql = nurAktive
+		? 'SELECT * FROM trick WHERE aktiv = 1 ORDER BY name'
+		: 'SELECT * FROM trick ORDER BY aktiv DESC, name'
+	return db.prepare(sql).all() as unknown as TrickRow[]
+}
+
+/** Legt einen Trick an, falls er fehlt, und gibt seine id zurück. */
+export function ensureTrick(db: DatabaseSync, name: string): number {
+	const trimmed = name.trim()
+	if (trimmed === '') throw new Error('Trick-Name darf nicht leer sein')
+	db.prepare('INSERT INTO trick (name) VALUES (?) ON CONFLICT(name) DO NOTHING').run(trimmed)
+	const row = db.prepare('SELECT id FROM trick WHERE name = ?').get(trimmed) as { id: number }
+	return row.id
+}
+
+export interface AttemptInput {
+	sessionId: number
+	trickId: number
+	versuche: number
+	gestanden: number
+	/** 1 gerade so, 2 gut, 3 sehr gut — leer, wenn nichts stand. */
+	wertung?: number
+	notiz?: string
+}
+
+export function upsertAttempt(db: DatabaseSync, a: AttemptInput): void {
+	db.prepare(
+		`INSERT INTO trick_attempt (session_id, trick_id, versuche, gestanden, wertung, notiz)
+		 VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(session_id, trick_id) DO UPDATE SET
+			versuche = excluded.versuche,
+			gestanden = excluded.gestanden,
+			wertung = excluded.wertung,
+			notiz = excluded.notiz`,
+	).run(a.sessionId, a.trickId, a.versuche, a.gestanden, a.wertung ?? null, a.notiz ?? null)
+}
+
+export interface AttemptRow {
+	trick_id: number
+	name: string
+	versuche: number
+	gestanden: number
+	wertung: number | null
+	notiz: string | null
+}
+
+export function attemptsForSession(db: DatabaseSync, sessionId: number): AttemptRow[] {
+	return db
+		.prepare(
+			`SELECT a.trick_id, t.name, a.versuche, a.gestanden, a.wertung, a.notiz
+			 FROM trick_attempt a JOIN trick t ON t.id = a.trick_id
+			 WHERE a.session_id = ? ORDER BY t.name`,
+		)
+		.all(sessionId) as unknown as AttemptRow[]
 }
 
 export interface WeekRow {

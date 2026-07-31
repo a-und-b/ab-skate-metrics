@@ -1,6 +1,12 @@
 # 0004 — Handy-Erfassung: SvelteKit im Heimnetz, kein Server im Internet
 
-Status: vorgeschlagen · Datum: 2026-07-31
+Status: abgelehnt · Datum: 2026-07-31 · abgelöst durch ADR-0006
+
+> **Ablehnungsgrund (Holger, 31.07.2026):** Die Erfassung soll direkt nach oder
+> während der Session im Park möglich sein, nicht erst zu Hause. Damit fällt die
+> tragende Annahme dieses ADRs — dass die Heimfahrt vor der Erfassung liegt.
+> Das Risiko des Serverbetriebs ist bewusst als vertretbar eingestuft.
+> Die Abwägung unten bleibt als Entscheidungsgrundlage stehen.
 
 ## Kontext
 

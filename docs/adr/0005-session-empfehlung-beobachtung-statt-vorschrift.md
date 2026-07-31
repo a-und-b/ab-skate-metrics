@@ -1,6 +1,6 @@
 # 0005 — Session-Empfehlung: Beobachtung und Option, nie Vorschrift
 
-Status: vorgeschlagen · Datum: 2026-07-31
+Status: angenommen · Datum: 2026-07-31
 
 ## Kontext
 
