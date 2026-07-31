@@ -11,4 +11,6 @@ data/
 BRIEFING.md
 
 node_modules/
+.svelte-kit/
+build/
 .DS_Store
