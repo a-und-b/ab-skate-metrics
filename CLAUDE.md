@@ -67,6 +67,14 @@ Karten und Profile rendert `domain/spur.ts` **serverseitig** zu fertigen
 SVG-Pfaden. Rohkoordinaten erreichen den Client nie, und die Umrechnung ist
 testbar statt im Markup versteckt.
 
+**Die Spur-Wiedergabe folgt der Zeit, nicht der Weglänge.** `spur.ts` liefert
+dafür `zeitProfil` als CSS-`linear()`-Easing (Zeit → Pfadanteil); ohne das
+würden Pausen übersprungen und schnelle Abschnitte am längsten dauern. 1× ist
+Echtzeit, das Tempo skaliert über `playbackRate` der Web Animations API —
+deshalb WAAPI statt CSS-Animation: nur so bleibt ein Tempowechsel im Lauf
+nahtlos. Tests decken Linearität bei konstanter Fahrt und das Plateau bei
+Stillstand ab.
+
 ## Nicht verhandelbare Invarianten
 
 - **Geo-Fuzzing ist Default** (ADR-0007): jede Kartendarstellung zeigt nur

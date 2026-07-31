@@ -70,6 +70,56 @@ test('Maßstab und Tempo werden mitgeliefert', () => {
 	assert.ok(g.hoehenPfad, 'Höhenprofil aus ele-Werten')
 })
 
+/** Zieht die Stützstellen aus dem linear()-Easing. */
+function stellen(zeitProfil: string): number[] {
+	return zeitProfil.slice('linear('.length, -1).split(',').map(Number)
+}
+
+test('Zeitprofil bildet gleichmäßige Fahrt nahezu linear ab', () => {
+	// 40 Punkte im Sekundentakt, gleicher Abstand — Zeit und Weg laufen parallel.
+	const g = spurGrafik(
+		Array.from({ length: 40 }, (_, i) => punkt(i, i * 0.000009, 0)),
+		{ ...SPUR_DEFAULTS, fuzz: false },
+	)
+	assert.ok(g)
+	const s = stellen(g.zeitProfil)
+	assert.equal(s[0], 0)
+	assert.equal(s[s.length - 1], 1)
+	// Bei konstantem Tempo darf die Kurve nicht mehr als 5 % von der Diagonale abweichen.
+	for (const [i, v] of s.entries()) {
+		assert.ok(Math.abs(v - i / (s.length - 1)) < 0.05, `Stelle ${i}: ${v}`)
+	}
+})
+
+test('Pause erzeugt ein Plateau — Stillstand steht auch in der Wiedergabe still', () => {
+	// 20 s fahren, 100 s stehen (Punkte am selben Ort), 20 s fahren.
+	const punkte: SpurPunkt[] = []
+	for (let i = 0; i < 20; i++) punkte.push(punkt(i, i * 0.000009, 0))
+	for (let i = 0; i < 100; i++) punkte.push(punkt(20 + i, 19 * 0.000009, 0, 0))
+	for (let i = 0; i < 20; i++) punkte.push(punkt(120 + i, (19 + i) * 0.000009, 0))
+
+	const g = spurGrafik(punkte, { ...SPUR_DEFAULTS, fuzz: false })
+	assert.ok(g)
+	const s = stellen(g.zeitProfil)
+	// Die Pause füllt das mittlere Zeitdrittel: dort darf sich der Pfadanteil
+	// kaum bewegen, obwohl vorher und nachher gefahren wurde.
+	const drittel = Math.floor(s.length / 3)
+	const zuwachsMitte = s[2 * drittel] - s[drittel]
+	const zuwachsAnfang = s[drittel] - s[0]
+	assert.ok(zuwachsMitte < 0.05, `Pause bewegt sich zu stark: ${zuwachsMitte}`)
+	assert.ok(zuwachsAnfang > zuwachsMitte * 3, 'Fahrt muss deutlich mehr Weg zeigen als die Pause')
+})
+
+test('Zeitprofil steigt monoton und endet bei 1', () => {
+	const g = spurGrafik(parkMitAnfahrt())
+	assert.ok(g)
+	const s = stellen(g.zeitProfil)
+	for (let i = 1; i < s.length; i++) {
+		assert.ok(s[i] >= s[i - 1], `Rücksprung an Stelle ${i}: ${s[i - 1]} → ${s[i]}`)
+	}
+	assert.equal(s[s.length - 1], 1)
+})
+
 test('fehlende Höhendaten ergeben kein Höhenprofil, aber eine Grafik', () => {
 	const ohneEle = parkMitAnfahrt().map((p) => ({ ...p, ele: null }))
 	const g = spurGrafik(ohneEle)

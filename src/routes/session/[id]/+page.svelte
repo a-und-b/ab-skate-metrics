@@ -35,6 +35,85 @@
 
 	const datum = $derived(data.session.start_local.slice(0, 10).split('-').reverse().join('.'))
 	const uhrzeit = $derived(data.session.start_local.slice(11))
+
+	// --- Wiedergabe der Spur ---------------------------------------------
+	// Die Animation folgt der Zeit, nicht der Weglänge: das Easing aus
+	// spur.ts bildet Wiedergabe-Zeit auf Pfad-Anteil ab. Dadurch steht ein
+	// Stillstand auch in der Wiedergabe still und schnelle Abschnitte ziehen
+	// vorbei. Web Animations API statt CSS, damit ein Tempowechsel im Lauf
+	// nahtlos greift (playbackRate) statt neu zu starten.
+	/** 1× ist Echtzeit: die Wiedergabe dauert so lang wie die Session selbst. */
+	const TEMPI = [0.25, 0.5, 1, 2, 4, 8]
+
+	let tempo = $state(1)
+	// Expliziter Zustand: playState der Animation ist nicht reaktiv.
+	let zustand = $state<'ruht' | 'laeuft' | 'pausiert'>('ruht')
+	let pfadEl = $state<SVGPathElement | null>(null)
+	let markerEl = $state<SVGCircleElement | null>(null)
+	let animationen: Animation[] = []
+
+	// Grunddauer ist die echte Aufzeichnungsdauer; das Tempo skaliert über
+	// playbackRate. So ist 1× tatsächlich Echtzeit und nicht bloß ein Etikett.
+	const dauerMs = $derived((data.spur?.dauerMin ?? 0) * 60_000)
+
+	const wiedergabeMin = $derived(dauerMs / tempo / 60_000)
+	const dauerText = $derived(
+		wiedergabeMin >= 1
+			? `${wiedergabeMin.toFixed(wiedergabeMin < 10 ? 1 : 0).replace('.', ',')} min`
+			: `${Math.round(wiedergabeMin * 60)} s`,
+	)
+
+	function abbrechen() {
+		for (const a of animationen) a.cancel()
+		animationen = []
+		if (pfadEl) pfadEl.style.strokeDasharray = ''
+	}
+
+	function starten() {
+		if (!data.spur || !pfadEl) return
+		abbrechen()
+		const optionen: KeyframeAnimationOptions = {
+			duration: dauerMs,
+			easing: data.spur.zeitProfil,
+			fill: 'forwards',
+		}
+		pfadEl.style.strokeDasharray = String(data.spur.pfadLaenge)
+		animationen = [
+			pfadEl.animate(
+				[
+					{ strokeDashoffset: data.spur.pfadLaenge },
+					{ strokeDashoffset: 0 },
+				],
+				optionen,
+			),
+		]
+		if (markerEl) {
+			animationen.push(markerEl.animate([{ offsetDistance: '0%' }, { offsetDistance: '100%' }], optionen))
+		}
+		for (const a of animationen) a.playbackRate = tempo
+		animationen[0].addEventListener('finish', () => {
+			// Nach dem Durchlauf wieder die vollständige Spur zeigen.
+			abbrechen()
+			zustand = 'ruht'
+		})
+		zustand = 'laeuft'
+	}
+
+	function umschalten() {
+		if (zustand === 'ruht') return starten()
+		if (zustand === 'laeuft') {
+			for (const a of animationen) a.pause()
+			zustand = 'pausiert'
+		} else {
+			for (const a of animationen) a.play()
+			zustand = 'laeuft'
+		}
+	}
+
+	function tempoSetzen(t: number) {
+		tempo = t
+		for (const a of animationen) a.playbackRate = t
+	}
 </script>
 
 <div class="mx-auto max-w-2xl px-4 pt-6 pb-28">
@@ -101,8 +180,7 @@
 					{/each}
 
 					<path
-						class="spur-animiert"
-						style="--spur-laenge: {data.spur.pfadLaenge}"
+						bind:this={pfadEl}
 						d={data.spur.pfad}
 						fill="none"
 						stroke="var(--color-text)"
@@ -110,6 +188,16 @@
 						stroke-opacity="0.85"
 						stroke-linejoin="round"
 						stroke-linecap="round"
+					/>
+
+					<!-- Läuft die Spur entlang und macht das Tempo sichtbar:
+					     bei Stillstand steht er, bei schneller Fahrt zieht er. -->
+					<circle
+						bind:this={markerEl}
+						r="4"
+						fill="var(--color-hinweis)"
+						style="offset-path: path('{data.spur.pfad}'); offset-rotate: 0deg;"
+						opacity={zustand === 'ruht' ? 0 : 1}
 					/>
 
 					<g transform="translate(16, 384)">
@@ -127,11 +215,48 @@
 				</svg>
 			</div>
 
-			{#if data.gefuzzt}
-				<p class="mt-2 text-xs text-text-leise">
+			<div class="mt-2 border border-rand">
+				<div class="flex items-center justify-between border-b border-rand">
+					<button
+						type="button"
+						onclick={umschalten}
+						class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-flaeche-leise"
+						aria-label={zustand === 'laeuft' ? 'Wiedergabe anhalten' : 'Spur abspielen'}
+					>
+						<svg viewBox="0 0 12 12" class="h-3 w-3" aria-hidden="true" fill="currentColor">
+							{#if zustand === 'laeuft'}
+								<rect x="1" y="1" width="3.5" height="10" /><rect x="7.5" y="1" width="3.5" height="10" />
+							{:else}
+								<path d="M2 1L11 6L2 11Z" />
+							{/if}
+						</svg>
+						{zustand === 'laeuft' ? 'Pause' : zustand === 'pausiert' ? 'Weiter' : 'Abspielen'}
+					</button>
+					<span class="marke px-3">Läuft {dauerText}</span>
+				</div>
+
+				<div class="grid grid-cols-6" role="group" aria-label="Wiedergabetempo">
+					{#each TEMPI as t, i}
+						<button
+							type="button"
+							onclick={() => tempoSetzen(t)}
+							aria-pressed={tempo === t}
+							class="zahl py-2 text-xs {i > 0 ? 'border-l border-rand' : ''}
+								{tempo === t ? 'bg-text text-flaeche' : 'text-text-leise hover:bg-flaeche-leise'}"
+						>
+							{t.toString().replace('.', ',')}×
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<p class="mt-2 text-xs text-text-leise">
+				{#if data.gefuzzt}
 					Kartenausschnitt auf den Park begrenzt — An- und Abfahrt werden nicht dargestellt.
-				</p>
-			{/if}
+				{/if}
+				Die Wiedergabe folgt der Zeit: Pausen stehen still, schnelle Abschnitte ziehen vorbei.
+				1× ist Echtzeit — die Session dauerte {Math.round(data.spur.dauerMin)} Minuten.
+			</p>
 		</figure>
 
 		<div class="mt-8 grid gap-6 sm:grid-cols-2">

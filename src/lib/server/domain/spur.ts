@@ -50,6 +50,13 @@ export interface SpurGrafik {
 	pfad: string
 	/** Länge des Pfads in SVG-Einheiten — speist die Zeichen-Animation. */
 	pfadLaenge: number
+	/**
+	 * CSS-`linear()`-Easing, das Wiedergabe-Zeit auf Pfad-Anteil abbildet.
+	 * Ohne das liefe das Replay mit konstanter Weglänge pro Sekunde: Pausen
+	 * wären übersprungen und schnelle Abschnitte dauerten am längsten — also
+	 * genau umgekehrt zur echten Fahrt.
+	 */
+	zeitProfil: string
 	/** Segmente nach Tempo gestaffelt — für Linienstärke ohne Wertung. */
 	segmente: { pfad: string; anteil: number }[]
 	/** Geschwindigkeitsprofil über die Zeit, als Flächenpfad. */
@@ -63,6 +70,47 @@ export interface SpurGrafik {
 	punkte: number
 	tempoMaxKmh: number
 	dauerMin: number
+}
+
+/** Stützstellen des Zeitprofils. 80 reichen für eine flüssige Kurve. */
+const PROFIL_STUFEN = 80
+
+/**
+ * Bildet gleichmäßige Wiedergabe-Zeit auf den zurückgelegten Pfad-Anteil ab
+ * und gibt das Ergebnis als CSS-`linear()`-Easing aus. Damit läuft die
+ * Wiedergabe zeitproportional: Stillstand bleibt stehen, schnelle Abschnitte
+ * ziehen vorbei — die relative Geschwindigkeit ist sichtbar.
+ */
+function zeitZuPfadAnteil(
+	punkte: SpurPunkt[],
+	kumLaenge: number[],
+	t0: number,
+	dauerMs: number,
+): string {
+	const gesamt = kumLaenge[kumLaenge.length - 1]
+	if (gesamt <= 0) return 'linear'
+	const zeiten = punkte.map((p) => new Date(p.t_utc).getTime() - t0)
+
+	const stellen: number[] = []
+	let j = 0
+	for (let k = 0; k <= PROFIL_STUFEN; k++) {
+		const ziel = (k / PROFIL_STUFEN) * dauerMs
+		while (j < zeiten.length - 2 && zeiten[j + 1] < ziel) j++
+		const spanne = zeiten[j + 1] - zeiten[j]
+		// Zwei Punkte in derselben Sekunde kommen vor — dann nicht teilen.
+		const anteil = spanne > 0 ? Math.min(1, Math.max(0, (ziel - zeiten[j]) / spanne)) : 0
+		const laenge = kumLaenge[j] + (kumLaenge[j + 1] - kumLaenge[j]) * anteil
+		stellen.push(Math.min(1, Math.max(0, laenge / gesamt)))
+	}
+	// linear() erwartet monoton steigende Werte; Rundung darf das nicht brechen.
+	let letzter = 0
+	const werte = stellen.map((s) => {
+		const v = Math.max(letzter, Math.round(s * 1000) / 1000)
+		letzter = v
+		return v
+	})
+	werte[werte.length - 1] = 1
+	return `linear(${werte.join(',')})`
 }
 
 /**
@@ -99,10 +147,14 @@ export function spurGrafik(alle: SpurPunkt[], opt: SpurOptionen = SPUR_DEFAULTS)
 
 	const rund = (n: number) => Math.round(n * 10) / 10
 	const pfad = punkte.map((p, i) => `${i === 0 ? 'M' : 'L'}${rund(x(p))} ${rund(y(p))}`).join('')
-	let pfadLaenge = 0
+	// Kumulierte Weglänge je Punkt — Grundlage für die Zuordnung Zeit → Pfadanteil.
+	const kumLaenge = [0]
 	for (let i = 1; i < punkte.length; i++) {
-		pfadLaenge += Math.hypot(x(punkte[i]) - x(punkte[i - 1]), y(punkte[i]) - y(punkte[i - 1]))
+		kumLaenge.push(
+			kumLaenge[i - 1] + Math.hypot(x(punkte[i]) - x(punkte[i - 1]), y(punkte[i]) - y(punkte[i - 1])),
+		)
 	}
+	const pfadLaenge = kumLaenge[kumLaenge.length - 1]
 
 	// Drei Tempostufen als getrennte Pfade. Keine Farbskala: unterschiedliche
 	// Strichstärke zeigt Tempo, ohne schnell/langsam zu bewerten.
@@ -126,6 +178,7 @@ export function spurGrafik(alle: SpurPunkt[], opt: SpurOptionen = SPUR_DEFAULTS)
 	const t0 = new Date(punkte[0].t_utc).getTime()
 	const tEnd = new Date(punkte[punkte.length - 1].t_utc).getTime()
 	const dauerMs = Math.max(tEnd - t0, 1)
+	const zeitProfil = zeitZuPfadAnteil(punkte, kumLaenge, t0, dauerMs)
 
 	const profil = (werte: (number | null)[], glaetten: number): string | null => {
 		const gueltig = werte.map((w, i) => ({ w, i })).filter((e): e is { w: number; i: number } => e.w !== null)
@@ -159,6 +212,7 @@ export function spurGrafik(alle: SpurPunkt[], opt: SpurOptionen = SPUR_DEFAULTS)
 	return {
 		pfad,
 		pfadLaenge: Math.ceil(pfadLaenge),
+		zeitProfil,
 		segmente,
 		tempoPfad,
 		hoehenPfad,

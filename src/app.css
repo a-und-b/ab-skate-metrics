@@ -55,25 +55,5 @@ body {
 	}
 }
 
-/* Die Spur zeichnet sich einmal beim Laden — wie ein Plotter, der die
-   Aufzeichnung ausgibt. Ein Moment, nicht überall Bewegung. */
-@keyframes spur-zeichnen {
-	from {
-		stroke-dashoffset: var(--spur-laenge);
-	}
-	to {
-		stroke-dashoffset: 0;
-	}
-}
-
-.spur-animiert {
-	stroke-dasharray: var(--spur-laenge);
-	animation: spur-zeichnen 2.2s cubic-bezier(0.33, 0.1, 0.2, 1) forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.spur-animiert {
-		animation: none;
-		stroke-dasharray: none;
-	}
-}
+/* Die Wiedergabe läuft über die Web Animations API (siehe Session-Ansicht):
+   nur so bleibt ein Tempowechsel mitten im Lauf nahtlos, statt neu zu starten. */
