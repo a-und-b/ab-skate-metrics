@@ -6,11 +6,12 @@ import { cleanTrackpoints, computeGpxMetrics } from './metrics.ts'
 
 // Synthetische Fixtures (nie aus dem echten Export abgeleitet): Punkte im
 // Sekundenabstand entlang eines Breitenkreises, ~1 m pro 0.000009° Latitude.
+// Nullpunkt bewusst bei 0/0 — im öffentlichen Repo soll keine Geografie stehen.
 function makePoints(speedsMs: number[], opts: { hAcc?: number[]; gapAfter?: number } = {}): Trackpoint[] {
 	return speedsMs.map((speedMs, i) => ({
 		t: new Date(Date.UTC(2026, 0, 1, 12, 0, i + (opts.gapAfter !== undefined && i > opts.gapAfter ? 60 : 0))),
-		lat: 50 + i * 0.000009,
-		lon: 11,
+		lat: i * 0.000009,
+		lon: 0,
 		speedMs,
 		hAcc: opts.hAcc?.[i],
 	}))
