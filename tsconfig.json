@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"target": "esnext",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"erasableSyntaxOnly": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"types": ["node"]
+	},
+	"include": ["src", "scripts"]
+}

@@ -1,6 +1,6 @@
 # 0002 — Datenmodell: Trackpoints persistieren, nicht nur Aggregate
 
-Status: vorgeschlagen · Datum: 2026-07-31
+Status: angenommen · Datum: 2026-07-31
 
 ## Kontext
 

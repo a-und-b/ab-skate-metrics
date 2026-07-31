@@ -11,16 +11,19 @@ Fitness-Apps.
 
 ## Projektstand
 
-Frisch gebootstrapped. Es gibt noch keinen lauffähigen Code — aktuell nur die
-Projektstruktur und die ersten Architektur-Entscheidungen in `docs/adr/`.
-Meilenstein 1 (CLI-Ingest des Health-Exports nach SQLite plus Terminal-Report)
-ist in Arbeit.
+Meilenstein 1 ist umgesetzt: Ingest des Health-Exports nach SQLite plus
+Terminal-Report. Web-UI, Trick-Log, HR-Zonen und Karte existieren noch nicht.
 
-## Setup
+## Setup und Nutzung
 
 ```bash
-nvm use          # Node 24 zwingend (node:sqlite, natives TS-Type-Stripping)
-cp .env.example .env   # Pfade eintragen
+nvm use                  # Node 24 zwingend (node:sqlite, natives TS-Type-Stripping)
+npm install
+cp .env.example .env     # Pfade eintragen
+node scripts/ingest.ts   # Export.xml + GPX → SQLite (idempotent, dauert Minuten)
+node scripts/report.ts   # Session-Tabelle + Top-Speed-Trend im Terminal
+npm test                 # Domain-Tests gegen synthetische Fixtures
+npm run check            # tsc --noEmit
 ```
 
 ## Datenschutz
