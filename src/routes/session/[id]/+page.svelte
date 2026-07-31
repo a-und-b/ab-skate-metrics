@@ -43,9 +43,11 @@
 	// vorbei. Web Animations API statt CSS, damit ein Tempowechsel im Lauf
 	// nahtlos greift (playbackRate) statt neu zu starten.
 	/** 1× ist Echtzeit: die Wiedergabe dauert so lang wie die Session selbst. */
-	const TEMPI = [0.25, 0.5, 1, 2, 4, 8]
+	const TEMPI = [0.25, 0.5, 1, 2, 4, 8, 16]
 
 	let tempo = $state(1)
+	/** Die vollständige Spur als schwacher Hintergrund. Aus: der Pfad wächst blank. */
+	let kontext = $state(true)
 	// Expliziter Zustand: playState der Animation ist nicht reaktiv.
 	let zustand = $state<'ruht' | 'laeuft' | 'pausiert'>('ruht')
 	let pfadEl = $state<SVGPathElement | null>(null)
@@ -97,6 +99,11 @@
 			zustand = 'ruht'
 		})
 		zustand = 'laeuft'
+	}
+
+	/** Von vorn — auch mitten im Lauf oder aus der Pause heraus. */
+	function neustarten() {
+		starten()
 	}
 
 	function umschalten() {
@@ -166,18 +173,21 @@
 					</defs>
 					<rect width="600" height="400" fill="url(#raster)" />
 
-					<!-- Langsame Abschnitte dünn, schnelle kräftig. Strichstärke statt
-					     Farbskala: das zeigt Tempo, ohne schnell/langsam zu bewerten. -->
-					{#each data.spur.segmente as seg}
-						<path
-							d={seg.pfad}
-							fill="none"
-							stroke="var(--color-text)"
-							stroke-width={0.6 + seg.anteil * 1.8}
-							stroke-opacity={0.25 + seg.anteil * 0.35}
-							stroke-linecap="round"
-						/>
-					{/each}
+					<!-- Kontext-Layer: die vollständige Spur, nur angedeutet. Langsame
+					     Abschnitte dünn, schnelle kräftig — Strichstärke statt Farbskala,
+					     das zeigt Tempo, ohne schnell/langsam zu bewerten. -->
+					{#if kontext}
+						{#each data.spur.segmente as seg}
+							<path
+								d={seg.pfad}
+								fill="none"
+								stroke="var(--color-text)"
+								stroke-width={0.6 + seg.anteil * 1.6}
+								stroke-opacity={0.06 + seg.anteil * 0.12}
+								stroke-linecap="round"
+							/>
+						{/each}
+					{/if}
 
 					<path
 						bind:this={pfadEl}
@@ -216,32 +226,66 @@
 			</div>
 
 			<div class="mt-2 border border-rand">
-				<div class="flex items-center justify-between border-b border-rand">
+				<div class="flex items-stretch justify-between border-b border-rand">
+					<div class="flex items-stretch">
+						<button
+							type="button"
+							onclick={umschalten}
+							class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-flaeche-leise"
+							aria-label={zustand === 'laeuft' ? 'Wiedergabe anhalten' : 'Spur abspielen'}
+						>
+							<svg viewBox="0 0 12 12" class="h-3 w-3" aria-hidden="true" fill="currentColor">
+								{#if zustand === 'laeuft'}
+									<rect x="1" y="1" width="3.5" height="10" /><rect
+										x="7.5"
+										y="1"
+										width="3.5"
+										height="10"
+									/>
+								{:else}
+									<path d="M2 1L11 6L2 11Z" />
+								{/if}
+							</svg>
+							{zustand === 'laeuft' ? 'Pause' : zustand === 'pausiert' ? 'Weiter' : 'Abspielen'}
+						</button>
+						<button
+							type="button"
+							onclick={neustarten}
+							class="border-l border-rand px-3 py-2 hover:bg-flaeche-leise"
+							aria-label="Wiedergabe von vorn"
+							title="Von vorn"
+						>
+							<svg viewBox="0 0 12 12" class="h-3.5 w-3.5" aria-hidden="true">
+								<path
+									d="M10 6A4 4 0 1 1 6 2"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+									stroke-linecap="round"
+								/>
+								<path d="M6 0L6 4L2.6 2Z" fill="currentColor" />
+							</svg>
+						</button>
+					</div>
+
 					<button
 						type="button"
-						onclick={umschalten}
-						class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-flaeche-leise"
-						aria-label={zustand === 'laeuft' ? 'Wiedergabe anhalten' : 'Spur abspielen'}
+						onclick={() => (kontext = !kontext)}
+						aria-pressed={kontext}
+						class="marke border-l border-rand px-3 hover:bg-flaeche-leise
+							{kontext ? 'text-text' : ''}"
 					>
-						<svg viewBox="0 0 12 12" class="h-3 w-3" aria-hidden="true" fill="currentColor">
-							{#if zustand === 'laeuft'}
-								<rect x="1" y="1" width="3.5" height="10" /><rect x="7.5" y="1" width="3.5" height="10" />
-							{:else}
-								<path d="M2 1L11 6L2 11Z" />
-							{/if}
-						</svg>
-						{zustand === 'laeuft' ? 'Pause' : zustand === 'pausiert' ? 'Weiter' : 'Abspielen'}
+						Kontext {kontext ? 'an' : 'aus'}
 					</button>
-					<span class="marke px-3">Läuft {dauerText}</span>
 				</div>
 
-				<div class="grid grid-cols-6" role="group" aria-label="Wiedergabetempo">
+				<div class="grid grid-cols-7" role="group" aria-label="Wiedergabetempo">
 					{#each TEMPI as t, i}
 						<button
 							type="button"
 							onclick={() => tempoSetzen(t)}
 							aria-pressed={tempo === t}
-							class="zahl py-2 text-xs {i > 0 ? 'border-l border-rand' : ''}
+							class="zahl py-2 text-[0.7rem] {i > 0 ? 'border-l border-rand' : ''}
 								{tempo === t ? 'bg-text text-flaeche' : 'text-text-leise hover:bg-flaeche-leise'}"
 						>
 							{t.toString().replace('.', ',')}×
@@ -255,7 +299,8 @@
 					Kartenausschnitt auf den Park begrenzt — An- und Abfahrt werden nicht dargestellt.
 				{/if}
 				Die Wiedergabe folgt der Zeit: Pausen stehen still, schnelle Abschnitte ziehen vorbei.
-				1× ist Echtzeit — die Session dauerte {Math.round(data.spur.dauerMin)} Minuten.
+				1× ist Echtzeit — die Session dauerte {Math.round(data.spur.dauerMin)} Minuten, der
+				Durchlauf braucht {dauerText}.
 			</p>
 		</figure>
 
