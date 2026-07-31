@@ -32,6 +32,8 @@ Vor jeder Architekturarbeit: `docs/adr/` lesen.
 ```bash
 nvm use                  # Node 24 zwingend — node:sqlite + natives TS-Type-Stripping
 npm test                 # node --test "src/lib/**/*.test.ts" — ohne Netzwerk
+npm run check            # svelte-check (muss 0 Fehler sein, vor jedem Commit)
+npm run dev              # Trick-Erfassung, http://localhost:5173
 node scripts/ingest.ts   # Health-Export → SQLite (Meilenstein 1)
 node scripts/report.ts   # Session-Tabelle + Top-Speed-Trend im Terminal
 ```
@@ -47,8 +49,13 @@ die CLI in `scripts/` importiert **dieselben** Domain-Module. Konkret:
 `scripts/ingest.ts` und eine spätere `/api/sessions`-Route rufen dieselbe
 Funktion auf — sonst sitzt Logik an der falschen Stelle.
 
-Die Web-UI (SvelteKit) ist bewusst noch nicht aufgesetzt — Meilenstein 1 ist
-CLI-only. SvelteKit kommt mit einem eigenen Meilenstein.
+Die Web-UI umfasst bisher nur die Trick-Erfassung (`/session/[id]`). Sie läuft
+lokal; das Deployment nach Coolify/Hetzner steht am Ende (ADR-0006) und bekommt
+**nur** `session`, `trick`, `trick_attempt` — `trackpoint` bleibt lokal.
+
+Farben laufen über semantische Tokens in `src/app.css` (`text-leise`, `rand`,
+`flaeche`, `hinweis`) mit nativem `light-dark()`. Keine `dark:`-Varianten im
+Markup, keine rohen `slate-*`-Klassen.
 
 ## Nicht verhandelbare Invarianten
 

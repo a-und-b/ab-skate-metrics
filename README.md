@@ -12,7 +12,8 @@ Fitness-Apps.
 ## Projektstand
 
 Meilenstein 1 ist umgesetzt: Ingest des Health-Exports nach SQLite plus
-Terminal-Report. Web-UI, Trick-Log, HR-Zonen und Karte existieren noch nicht.
+Terminal-Report. Dazu die Trick-Erfassung als Web-Formular (handy-tauglich,
+läuft bisher nur lokal). HR-Zonen, Empfehlung und Karte existieren noch nicht.
 
 ## Setup und Nutzung
 
@@ -22,8 +23,9 @@ npm install
 cp .env.example .env     # Pfade eintragen
 node scripts/ingest.ts   # Export.xml + GPX → SQLite (idempotent, dauert Minuten)
 node scripts/report.ts   # Session-Tabelle + Top-Speed-Trend im Terminal
+npm run dev              # Trick-Erfassung im Browser (http://localhost:5173)
 npm test                 # Domain-Tests gegen synthetische Fixtures
-npm run check            # tsc --noEmit
+npm run check            # svelte-check
 ```
 
 ## Datenschutz

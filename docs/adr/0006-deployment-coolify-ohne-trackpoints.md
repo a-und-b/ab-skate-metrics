@@ -1,6 +1,6 @@
 # 0006 — Deployment auf Coolify/Hetzner, aber ohne Trackpoints
 
-Status: vorgeschlagen · Datum: 2026-07-31 · ersetzt ADR-0004
+Status: angenommen · Datum: 2026-07-31 · ersetzt ADR-0004
 
 ## Kontext
 

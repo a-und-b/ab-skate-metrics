@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+
+/* Semantische Farben über natives light-dark() — eine Klasse im Markup,
+   beide Modi. Abendsessions am Handy sollen nicht blenden. */
+@theme {
+	--color-flaeche: light-dark(white, oklch(0.19 0.01 250));
+	--color-flaeche-leise: light-dark(oklch(0.96 0.005 250), oklch(0.25 0.01 250));
+	--color-text: light-dark(oklch(0.21 0.02 250), oklch(0.95 0.005 250));
+	--color-text-leise: light-dark(oklch(0.47 0.02 250), oklch(0.72 0.02 250));
+	--color-rand: light-dark(oklch(0.85 0.01 250), oklch(0.38 0.01 250));
+	/* Kritische Werte in Bernstein, nie Rot (Briefing 9). */
+	--color-hinweis: light-dark(oklch(0.62 0.13 75), oklch(0.78 0.13 75));
+}
+
+html {
+	color-scheme: light dark;
+	background: var(--color-flaeche);
+	color: var(--color-text);
+}

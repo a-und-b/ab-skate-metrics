@@ -167,6 +167,10 @@ export function listSessions(db: DatabaseSync): SessionRow[] {
 	return db.prepare('SELECT * FROM session ORDER BY start_utc').all() as unknown as SessionRow[]
 }
 
+export function getSession(db: DatabaseSync, id: number): SessionRow | undefined {
+	return db.prepare('SELECT * FROM session WHERE id = ?').get(id) as unknown as SessionRow | undefined
+}
+
 export interface TrickRow {
 	id: number
 	name: string
